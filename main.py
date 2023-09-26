@@ -42,21 +42,34 @@ def request_list(url: str, url_list: list[str] = [], max_page: int = 5, current_
 
 
 def request_data(url: str) -> dict:
-  # html = requests.get(url).text
-  html = None
-
-  with open('html.html', 'r') as file:
-    html = file.read()
+  html = requests.get(url).text
 
   soup = BeautifulSoup(html, 'html.parser')
   data = {
-    'title': soup.select_one('header.adPage__header').text.strip(),
-    'photos': [photo.attrs['src'] for photo in soup.select('#js-ad-photos img')],
+    'title': '',
+    'photos': [],
     'region': '',
     'description': '',
     'prices': {},
-    'features': {}
+    'features': {
+    },
+    'other features': [],
+    'categories': [],
+    'owner': {},
+    'views': '',
+    'type': '',
+    'date': '',
+    'phone': ''
   }
+
+  title = soup.select_one('header.adPage__header')
+  if title is not None:
+    data['title'] = title.text.strip()
+
+  photos = soup.select('#js-ad-photos img')
+  if photos is not None:
+    for photo in photos:
+      data['photos'].append(photo.attrs['src'])
 
   description = soup.select_one('div.adPage__content__description')
   if description is not None:
@@ -77,7 +90,7 @@ def request_data(url: str) -> dict:
 
   region = soup.select_one('dl.adPage__content__region')
   if region is not None:
-      data['region'] = ''.join([part.text.strip() for part in region.select('dd')])
+    data['region'] = ''.join([part.text.strip() for part in region.select('dd')])
 
   features = soup.select('.adPage__content__features__col ul')
   if features is not None:
@@ -87,14 +100,34 @@ def request_data(url: str) -> dict:
 
     for li in li_list:
       key = li.select_one('[itemprop=name]').text.strip()
-      value = li.select_one('[itemprop=value]').text.strip()
-      data['features'][key] = value
+      value = li.select_one('[itemprop=value]')
+      if value is not None:
+        data['features'][key] = value.text.strip()
+      else:
+        data['other features'].append(key)
 
+  categories = soup.select_one('#m__breadcrumbs')
+  if categories is not None:
+    for li in categories.select('li')[:-1]:
+      data['categories'].append(li.text.strip())
+
+  owner = soup.select_one('.adPage__aside__stats__owner__login')
+  if owner is not None:
+    data['owner']['name'] = owner.text.strip()
+    data['owner']['url'] = BASE_URL + owner.attrs['href']
+
+  data['views'] = soup.select_one('.adPage__aside__stats__views').text.split(':')[1].split('(')[0].strip()
+  data['type'] = soup.select_one('.adPage__aside__stats__type').text.split(':')[1].strip()
+  data['date'] = ':'.join(soup.select_one('.adPage__aside__stats__date').text.split(':')[1:]).strip()
+
+  phone = soup.select_one('.adPage__content__phone')
+  if phone is not None:
+    data['phone'] = phone.select_one('a').attrs['href'].split(':')[1].strip()
 
   return data
 
 
-data = request_data('https://999.md/ro/84070407')
+data = request_data('https://999.md/ro/82823203')
 
 with open('data.json', 'w') as file:
   file.write(json.dumps(data, indent=2, ensure_ascii=False))

@@ -1,44 +1,55 @@
 {
-  "title": "Mercedes Vito",
+  "title": "HP Zbook 15 G2 (i7 4800HQ, Ram 16Gb, SSD 500Gb, Nvidia Quadro K2100 2Gb)",
   "photos": [
-    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/3a83c3a30b47bfee3707e509770d019c.jpg",
-    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/361a2907895138f58c0fe0929e8dd4ac.jpg",
-    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/17e1e0059690d4dd592af7e2658d4648.jpg",
-    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/89a7dadbf416a5f0dc08e22beee4f0f6.jpg",
-    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/aac506bacc07f9e7bddde4a8b040af9a.jpg",
-    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/87564fc49f8ec1dcb39eae3d4758471a.jpg",
-    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/3a83c3a30b47bfee3707e509770d019c.jpg",
-    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/361a2907895138f58c0fe0929e8dd4ac.jpg",
-    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/17e1e0059690d4dd592af7e2658d4648.jpg",
-    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/89a7dadbf416a5f0dc08e22beee4f0f6.jpg",
-    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/aac506bacc07f9e7bddde4a8b040af9a.jpg",
-    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/87564fc49f8ec1dcb39eae3d4758471a.jpg"
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/a0e89c0309cf7d03f578079bcd6d758c.jpg",
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/1d40d134036e33508a840c59b3ed6ec6.jpg",
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/76a1e80ebd773c08b4fa256b31c8a605.jpg",
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/277ca87662a6fc91773622be0b80db7f.jpg",
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/1a13279764d2a281efcf2fce2a9788b8.jpg",
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/2c8831ce050c1dbc4802699e0385a847.jpg",
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/765ba5dbcbfeea58b383f1dbf5f8ccc3.jpg",
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/a0e89c0309cf7d03f578079bcd6d758c.jpg",
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/1d40d134036e33508a840c59b3ed6ec6.jpg",
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/76a1e80ebd773c08b4fa256b31c8a605.jpg",
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/277ca87662a6fc91773622be0b80db7f.jpg",
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/1a13279764d2a281efcf2fce2a9788b8.jpg",
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/2c8831ce050c1dbc4802699e0385a847.jpg",
+    "https://i.simpalsmedia.com/999.md/BoardImages/320x240/765ba5dbcbfeea58b383f1dbf5f8ccc3.jpg"
   ],
   "region": "Moldova,  Chișinău mun.",
-  "description": "Stare buna de funtionare.masina lucreaza in fiecare zi",
+  "description": "Stare foarte buna\nBateria 100% Volum!\nIncarcatorul Original\nHP Zbook 15 G2\nJocurile merg binisor dar e specializata pentru 3D modelare, render, grafica arhitecturala, video/foto redactare\n\n\n\n15.6\" FullHD ips 1920x1080\nIntel core i7 4800HQ 8x 2.70Ghz - 3.70Ghz\nRam 16Gb DDR4\nSSD NVME 512Gb\nVideo: 1) Intel HD 630\n     2) Nvidia Quadro K2100 2Gb GDDR5 128Bit\nSunet Bang & Olufsen\nTasta iluminata\nNfc, wifi, bluetooth\nCamera, 2 microfoane\n4x usb A, 1x usb c/ Thunderbolt 3.0\nPosibil de conectat pina la 3 monitoare\n\n ---------- ADAMO.MD ---------\n Garantie + Livrare gratuita!",
   "prices": {
-    "euros": "3 500",
-    "dollars": "3 723",
-    "lei": "67 768"
+    "euros": "350",
+    "dollars": "373",
+    "lei": "6 777"
   },
   "features": {
     "Tip ofertă": "Vând",
-    "Marcă": "Mercedes",
-    "Modelul": "Vito",
-    "Înmatriculare": "Republica Moldova",
-    "Stare": "Cu rulaj",
-    "Disponibilitate": "Disponibil",
-    "Autorul anunțului": "Persoană fizică",
-    "Anul fabricației": "2002",
-    "Volan": "Stânga",
-    "Numărul de locuri": "7",
-    "Tip caroserie": "Minivan",
-    "Kilometraj": "4 000 000   km",
-    "Capacit. motor (cm³)": "2 200   cm³",
-    "Putere (CP)": "108",
-    "Tip combustibil": "Diesel",
-    "Cutia de viteze": "Mecanică",
-    "Tip tracțiune": "Din față",
-    "Culoarea": "Verde închis"
-  }
+    "Producător": "HP",
+    "Tip": "Discret și încorporat",
+    "Tip procesor": "Intel Core i7",
+    "Dimensiune ecran": "14\" - 14.9\"",
+    "Rezoluție": "1920x1080 px",
+    "Stare": "La mâna a doua",
+    "Memorie RAM": "16 - 24 Gb",
+    "Viteză procesor": "3 700   MHz",
+    "Tip hdd": "SSD",
+    "Capacitate hdd": "500 Gb",
+    "Sistem de operare": "Windows",
+    "Greutate": "2   kg"
+  },
+  "other features": [],
+  "categories": [
+    "Acasă",
+    "Calculatoare și birotică",
+    "Laptopuri"
+  ],
+  "owner": {
+    "name": "ImportGermany",
+    "url": "https://999.md/ro/profile/ImportGermany"
+  },
+  "views": "1 175",
+  "type": "Vând",
+  "date": "26 sept. 2023, 16:17",
+  "phone": "+37379966909"
 }
