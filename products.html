@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>All products</title>
+<style>
+    .products-list > .product:not(:last-child) {
+        border-bottom: dashed 1px #000;
+    }
+
+    .products-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+</style>
+</head>
+<body>
+<div class="products-list">
+  %products
+</div>
+</body>
+</html>
