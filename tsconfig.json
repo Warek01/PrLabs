@@ -9,6 +9,7 @@
     "noEmit": true,
     "composite": true,
     "strict": true,
+    "strictNullChecks": false,
     "downlevelIteration": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
