@@ -9,6 +9,7 @@ import {
   MAX_FILE_PAYLOAD_SIZE,
   MessageType,
 } from './shared.ts'
+import path from 'path'
 
 const file: FileTransmissionData = {
   body: null,
@@ -75,7 +76,7 @@ async function handleConnection() {
         break
 
       case MessageType.Upload: {
-        const exists: boolean = await fs.exists(text)
+        const exists: boolean = await fs.exists(clientMediaFolder(text))
 
         if (!exists) {
           console.log(`File ${text} doesn't exist`)
@@ -83,8 +84,7 @@ async function handleConnection() {
         }
 
         file.name = text
-        file.body = await fs.readFile(file.name)
-
+        file.body = await fs.readFile(clientMediaFolder(file.name))
         file.sizeSent = 0
 
         client.write(
@@ -149,14 +149,14 @@ async function handleData(buffer: Buffer) {
     }
 
     case MessageType.EndTransmit: {
-      const exists: boolean = await fs.exists(file.name)
+      const exists: boolean = await fs.exists(clientMediaFolder(file.name))
 
       if (exists) {
-        await fs.rm(file.name)
+        await fs.rm(clientMediaFolder(file.name))
       }
 
       file.body = Buffer.concat(file.bodyParts)
-      await fs.writeFile(file.name, file.body)
+      await fs.writeFile(clientMediaFolder(file.name), file.body)
 
       console.log(`File "${file.name}" downloaded successfully`)
 
@@ -199,4 +199,8 @@ async function handleData(buffer: Buffer) {
       file.name = null
       break
   }
+}
+
+function clientMediaFolder(str: string): string {
+  return path.join(import.meta.dir, 'client_media', str)
 }
