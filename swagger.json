@@ -1,0 +1,287 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Swagger API",
+    "description": "PR test swagger UI",
+    "version": "1.0"
+  },
+  "basePath": "/api",
+  "schemes": [
+    "http"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "tags": [
+    {
+      "name": "Scooter",
+      "description": "Work with electro scooter model"
+    }
+  ],
+  "paths": {
+    "/electro-scooters": {
+      "post": {
+        "tags": [
+          "Scooter"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Create electro scooter",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "default": "Unnamed",
+                  "description": "Name of the scooter",
+                  "minLength": 1,
+                  "example": "Scooter 1"
+                },
+                "battery_level": {
+                  "type": "number"
+                }
+              }
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Model created",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/electro-scooters/{id}": {
+      "get": {
+        "tags": [
+          "Scooter"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Get electro scooter",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "number",
+              "default": 0,
+              "format": "int",
+              "description": "ID of scooter"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The scooter model",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "battery_level": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scooter not found",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Scooter"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Modify electro scooter",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "number",
+              "default": 0,
+              "format": "int",
+              "description": "ID of scooter"
+            },
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "battery_level": {
+                  "type": "number"
+                }
+              }
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The scooter model",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scooter not found",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Validation error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Scooter"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Delete electro scooter",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "number",
+              "default": 0,
+              "format": "int",
+              "description": "ID of scooter"
+            },
+            "required": true
+          },
+          {
+            "in": "header",
+            "name": "X-Delete-Password",
+            "schema": {
+              "title": "Password",
+              "type": "string",
+              "default": "your_secret_password",
+              "example": "your_secret_password"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scooter not found",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Validation error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  }
+}
