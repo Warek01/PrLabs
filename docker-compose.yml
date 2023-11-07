@@ -1,0 +1,13 @@
+services:
+  rabbitmq:
+    hostname: 'rabbitmq'
+    container_name: rabbitmq
+    build:
+      dockerfile: Dockerfile
+    ports:
+      - 15672:15672
+      - 5672:5672
+    environment:
+      RABBITMQ_DEFAULT_USER: warek
+      RABBITMQ_DEFAULT_PASS: warek
+

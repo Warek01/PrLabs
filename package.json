@@ -1,20 +1,23 @@
 {
   "name": "pr-labs",
-  "module": "index.ts",
   "type": "module",
   "scripts": {
-    "start": "bun run --watch index.ts",
-    "start:scraper": "bun run scraper.ts"
-  },
-  "devDependencies": {
-    "bun-types": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
+    "start:producer": "bun run src/producer.ts",
+    "start:master-consumer": "bun run src/master-consumer.ts",
+    "start:slave-consumer": "bun run src/slave-consumer.ts"
   },
   "dependencies": {
+    "@types/amqplib": "^0.10.4",
+    "amqplib": "^0.10.3",
+    "bun-types": "^1.0.10",
     "chrome": "^0.1.0",
-    "chromium": "^3.0.3",
-    "puppeteer": "^21.3.6"
+    "colorette": "^2.0.20",
+    "pg": "^8.11.3",
+    "prettier": "^3.0.3",
+    "puppeteer": "^21.5.0",
+    "reflect-metadata": "^0.1.13",
+    "ts-node": "^10.9.1",
+    "typeorm": "^0.3.17",
+    "typescript": "^5.2.2"
   }
 }

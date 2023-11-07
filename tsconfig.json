@@ -4,19 +4,22 @@
     "module": "esnext",
     "target": "esnext",
     "moduleResolution": "bundler",
+    "allowUnreachableCode": false,
+    "esModuleInterop": true,
+    "incremental": true,
     "moduleDetection": "force",
-    "allowImportingTsExtensions": true,
+    "allowImportingTsExtensions": false,
     "noEmit": true,
     "composite": true,
+    "allowJs": false,
     "strict": true,
-    "downlevelIteration": true,
     "skipLibCheck": true,
-    "jsx": "react-jsx",
     "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowJs": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "strictNullChecks": false,
     "types": [
-      "bun-types" // add Bun global
+      "bun-types",
     ]
   }
 }
