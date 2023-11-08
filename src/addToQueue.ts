@@ -13,7 +13,7 @@ await amqpChannel.assertQueue(appAmqpOptions.queue, {
 
 amqpChannel.sendToQueue(
   appAmqpOptions.queue,
-  Buffer.from('["https://999.md/ro/83810069","https://999.md/ro/82910472","https://999.md/ro/84862081"]'),
+  Buffer.from('["https://999.md/ro/83810069"]'),
   {},
 )
 

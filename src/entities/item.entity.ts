@@ -17,8 +17,8 @@ export class Item {
   @Column({ type: 'text', nullable: true })
   type?: string
 
-  @Column({ type: 'date', nullable: true })
-  date?: Date
+  @Column({ type: 'text', nullable: true })
+  date?: string
 
   @Column({ type: 'text', nullable: true })
   phone?: string
@@ -37,6 +37,7 @@ export class Item {
     euros?: number
     dollars?: number
     lei?: number
+    negotiable: boolean
   }
 
   @Column({ type: 'jsonb', nullable: true })

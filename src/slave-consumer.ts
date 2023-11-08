@@ -18,12 +18,9 @@ const amqpConnection: amqp.Connection = await amqp.connect(appAmqpOptions.url, {
 })
 
 try {
-  process.on('SIGTERM', async () => {
-    log('Terminating')
-    await dispose()
-    log('Terminated')
-    process.exit(0)
-  })
+  process
+    .once('SIGTERM', async () => await endProgram())
+    .once('SIGINT', async () => await endProgram())
 
   await dataSource.initialize()
   const itemRepo: Repository<Item> = dataSource.getRepository(Item)
@@ -63,7 +60,7 @@ try {
       item.title = await titleElement?.evaluate(
         (e) => e.textContent?.trim() ?? null,
       )
-      await titleElement?.dispose()
+      titleElement?.dispose()
 
       const descriptionElement = await page.$(
         'div.adPage__content__description',
@@ -71,13 +68,15 @@ try {
       item.description = await descriptionElement?.evaluate(
         (e) => e.textContent?.trim() ?? null,
       )
-      await descriptionElement?.dispose()
+      descriptionElement?.dispose()
 
       const pricesElement = await page.$$(
         'ul.adPage__content__price-feature__prices li',
       )
       if (pricesElement) {
-        item.prices = {}
+        item.prices = {
+          negotiable: false,
+        }
 
         for (const li of pricesElement) {
           const text = await li.evaluate((e) => e.textContent.trim())
@@ -96,19 +95,125 @@ try {
             allDigits += match
           }
 
-          item.prices[currency] = parseFloat(allDigits)
+          if (allDigits.length) {
+            item.prices[currency] = parseFloat(allDigits)
+          } else {
+            item.prices.negotiable = true
+          }
 
-          await li.dispose()
+          li.dispose()
         }
+      }
+
+      const regionElement = await page.$('dl.adPage__content__region')
+      item.region = await regionElement?.$$eval('dd', (elements) =>
+        elements
+          .map((e) => e.textContent.replaceAll(',', '').trim())
+          .join(', '),
+      )
+      regionElement?.dispose()
+
+      const featuresElement = await page.$$(
+        '.adPage__content__features__col ul',
+      )
+      if (featuresElement) {
+        item.features = {}
+        item.otherFeatures = []
+
+        for (const feature of featuresElement) {
+          const allLi = await feature.$$('li')
+
+          for (const li of allLi) {
+            const key = await li.$eval('[itemprop=name]', (e) =>
+              e.textContent.trim(),
+            )
+            const valueElement = await li.$('[itemprop=value]')
+
+            if (valueElement) {
+              item.features[key] = await valueElement.evaluate((e) =>
+                e.textContent.trim(),
+              )
+            } else {
+              item.otherFeatures.push(key)
+            }
+
+            valueElement?.dispose()
+            li.dispose()
+          }
+          feature.dispose()
+        }
+      }
+
+      const categoriesElement = await page.$('#m__breadcrumbs')
+      if (categoriesElement) {
+        item.categories = await categoriesElement.$$eval(
+          'li:not(:last-child)',
+          (lis) => lis.map((li) => li.textContent.trim()),
+        )
+      }
+      categoriesElement?.dispose()
+
+      const ownerElement = await page.$('.adPage__aside__stats__owner__login')
+      if (ownerElement) {
+        item.owner = {
+          url: await ownerElement.evaluate((e) => e.href),
+          name: await ownerElement.evaluate((e) => e.textContent.trim()),
+        }
+      }
+      ownerElement?.dispose()
+
+      const viewsElement = await page.$('.adPage__aside__stats__views')
+      if (viewsElement) {
+        item.views = await viewsElement.evaluate((e) =>
+          parseInt(
+            e.textContent
+              .split(':')[1]
+              .split('(')[0]
+              .trim()
+              .replaceAll(' ', ''),
+          ),
+        )
+      }
+      viewsElement?.dispose()
+
+      const typeElement = await page.$('.adPage__aside__stats__type')
+      if (typeElement) {
+        item.type = await typeElement.evaluate((e) =>
+          e.textContent.split(':')[1].trim(),
+        )
+      }
+      typeElement?.dispose()
+
+      const dateElement = await page.$('.adPage__aside__stats__date')
+      if (dateElement) {
+        item.date = await dateElement.evaluate((e) =>
+          e.textContent.split(':').slice(1).join(':').trim(),
+        )
+      }
+      dateElement?.dispose()
+
+      const phoneElement = await page.$('.adPage__content__phone')
+      if (phoneElement) {
+        item.phone = await phoneElement.$eval('a', (a) =>
+          a.href.split(':')[1].trim(),
+        )
+      }
+      phoneElement?.dispose()
+
+      item.photos = []
+      const photosElements = await page.$$('#js-ad-photos img')
+      for (const photo of photosElements) {
+        item.photos.push(await photo.evaluate((img) => img.src))
+        photo.dispose()
       }
 
       await itemRepo.save(item)
 
       log(`Finished ${anchor}`)
 
-      // Shutter random between 1 and 100 ms
+      // Random delay
       await new Promise((res) =>
-        setTimeout(() => res(null), Math.random() * 10),
+        setTimeout(() => res(null), Math.random() * 200),
       )
     }
   }
@@ -126,4 +231,11 @@ async function dispose(): Promise<void> {
     dataSource.destroy(),
     amqpConnection.close(),
   ])
+}
+
+async function endProgram() {
+  log('Terminating')
+  await dispose()
+  log('Terminated')
+  process.exit(0)
 }
