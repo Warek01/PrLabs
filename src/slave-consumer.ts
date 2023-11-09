@@ -11,6 +11,11 @@ import {
 } from './shared'
 import { Item } from './entities/item.entity'
 
+process
+  .once('SIGTERM', onTerminate)
+  .once('SIGKILL', onTerminate)
+  .once('SIGINT', onTerminate)
+
 const browser: Browser = await puppeteer.launch(appBrowserOptions)
 const dataSource: DataSource = new DataSource(appDataSourceOptions)
 const amqpConnection: amqp.Connection = await amqp.connect(appAmqpOptions.url, {
@@ -18,10 +23,6 @@ const amqpConnection: amqp.Connection = await amqp.connect(appAmqpOptions.url, {
 })
 
 try {
-  process
-    .once('SIGTERM', async () => await endProgram())
-    .once('SIGINT', async () => await endProgram())
-
   await dataSource.initialize()
   const itemRepo: Repository<Item> = dataSource.getRepository(Item)
   const amqpChannel: amqp.Channel = await amqpConnection.createChannel()
@@ -192,9 +193,9 @@ try {
       }
       dateElement?.dispose()
 
-      const phoneElement = await page.$('.adPage__content__phone')
+      const phoneElement = await page.$('.adPage__content__phone a')
       if (phoneElement) {
-        item.phone = await phoneElement.$eval('a', (a) =>
+        item.phone = await phoneElement.evaluate((a) =>
           a.href.split(':')[1].trim(),
         )
       }
@@ -233,7 +234,7 @@ async function dispose(): Promise<void> {
   ])
 }
 
-async function endProgram() {
+async function onTerminate() {
   log('Terminating')
   await dispose()
   log('Terminated')

@@ -7,6 +7,7 @@ import {
 } from 'puppeteer'
 import * as colorette from 'colorette'
 import { DataSourceOptions } from 'typeorm'
+
 import { Item } from './entities/item.entity'
 
 export const appAmqpOptions = {
@@ -21,16 +22,15 @@ export const appBrowserOptions: PuppeteerLaunchOptions = {
   waitForInitialPage: false,
   product: 'chrome',
   channel: 'chrome',
+  ignoreHTTPSErrors: true,
   defaultViewport: {
-    height: 720,
-    width: 1280,
+    height: 800,
+    width: 600,
     hasTouch: false,
     isMobile: false,
     isLandscape: true,
     deviceScaleFactor: 1,
   },
-  ignoreHTTPSErrors: false,
-  args: ['--disable-features=site-per-process'],
 }
 
 export const appDataSourceOptions: DataSourceOptions = {
@@ -45,17 +45,25 @@ export const appDataSourceOptions: DataSourceOptions = {
   entities: [Item],
 }
 
-export function requestInterceptor(request: HTTPRequest): void {
-  switch (request.resourceType()) {
-    case 'image':
-    case 'stylesheet':
-    case 'font':
-    case 'media':
-      request.abort()
-      break
+export async function requestInterceptor(request: HTTPRequest): Promise<void> {
+  const type = request.resourceType()
 
-    default:
-      request.continue()
+  const shouldBlock: (typeof type)[] = [
+    'image',
+    'stylesheet',
+    'websocket',
+    'eventsource',
+    'cspviolationreport',
+    'font',
+    'media',
+  ]
+
+  // console.log(type, shouldBlock.includes(type))
+
+  if (shouldBlock.includes(type)) {
+    await request.abort()
+  } else {
+    await request.continue()
   }
 }
 
@@ -63,7 +71,15 @@ export function onPageConsoleMessage(message: ConsoleMessage): void {
   const type: ConsoleMessageType = message.type()
   const text: string = message.text()
 
-  if (type === 'log') {
-    console.log(`${colorette.blue('Browser:')} ${colorette.blueBright(text)}`)
+  const supportedTypes: ConsoleMessageType[] = ['log', 'error', 'warning']
+
+  const colors: Partial<Record<ConsoleMessageType, colorette.Color>> = {
+    log: colorette.blueBright,
+    warning: colorette.yellowBright,
+    error: colorette.redBright,
+  }
+
+  if (supportedTypes.includes(type)) {
+    console.log(colors[type](`${colorette.underline('Browser:')} ${text}`))
   }
 }

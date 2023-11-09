@@ -5,19 +5,24 @@ import {
   appBrowserOptions,
   appAmqpOptions,
   onPageConsoleMessage,
+  requestInterceptor,
 } from './shared'
 
-const initialPageUrl = 'https://999.md/ro/list/transport/cars?page='
+process
+  .on('SIGINT', onTerminate)
+  .on('SIGTERM', onTerminate)
+  .on('SIGKILL', onTerminate)
 
+const initialPageUrl = 'https://999.md/ro/list/transport/cars?page='
 const browser: Browser = await puppeteer.launch(appBrowserOptions)
 const page: Page = await browser.newPage()
 
-page.on('console', onPageConsoleMessage)
+await page.setRequestInterception(true)
+page.on('console', onPageConsoleMessage).on('request', requestInterceptor)
 
 const amqpConnection: amqp.Connection = await amqp.connect(appAmqpOptions.url, {
   credentials: appAmqpOptions.credentials,
 })
-
 const amqpChannel: amqp.Channel = await amqpConnection.createChannel()
 
 await amqpChannel.assertQueue(appAmqpOptions.queue, {
@@ -44,9 +49,9 @@ async function extractLinks(
   const url: string = initialPageUrl + pageIndex
 
   console.log(`Requesting ${url}`)
-  await page.goto(url)
+  await page.goto(url, { waitUntil: 'load' })
 
-  await page.waitForSelector('.ads-list-photo')
+  // await page.waitForSelector('.ads-list-photo')
   const anchors = await page.$$(
     '.ads-list-photo .ads-list-photo-item:not(:has(span.booster-label)) a.js-item-ad',
   )
@@ -80,4 +85,9 @@ async function extractLinks(
   return hasNext && pageIndex <= maxPageIndex
     ? extractLinks(page, pageIndex + 1, maxPageIndex)
     : null
+}
+
+async function onTerminate(): Promise<void> {
+  await Promise.all([browser.close(), amqpConnection.close()])
+  process.exit(0)
 }

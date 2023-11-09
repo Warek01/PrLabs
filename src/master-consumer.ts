@@ -2,18 +2,19 @@ import path from 'path'
 import * as colorette from 'colorette'
 import { ChildProcess, fork } from 'child_process'
 
-const slavePath = path.join(__dirname, 'slave-consumer.ts')
-const procs: ChildProcess[] = []
+const slavePath: string = path.join(__dirname, 'slave-consumer.ts')
+const childProcesses: ChildProcess[] = []
 
 console.log(
-  `Type ${colorette.greenBright('start <nr>')} or ${colorette.greenBright(
+  `Type ${colorette.greenBright('start <COUNT>')} or ${colorette.greenBright(
     'stop',
   )}`,
 )
 
 process
-  .once('SIGINT', async () => await endProcess())
-  .once('SIGTERM', async () => await endProcess())
+  .on('SIGINT', onTerminate)
+  .on('SIGTERM', onTerminate)
+  .on('SIGKILL', onTerminate)
 
 try {
   for await (let line of console) {
@@ -31,7 +32,7 @@ try {
 
         console.log(`Started consumer ${i} pid: ${proc.pid}`)
 
-        procs.push(proc)
+        childProcesses.push(proc)
 
         /* Does not work properly with typeorm */
         // const worker: Worker = new Worker(
@@ -45,7 +46,7 @@ try {
     } else if (line === 'stop') {
       console.log('Closing')
 
-      for (const proc of procs) {
+      for (const proc of childProcesses) {
         proc.kill('SIGTERM')
       }
 
@@ -55,11 +56,11 @@ try {
     }
   }
 } finally {
-  await endProcess()
+  await onTerminate()
 }
 
-async function endProcess(): Promise<void> {
-  for (const proc of procs) {
+async function onTerminate(): Promise<void> {
+  for (const proc of childProcesses) {
     if (!proc.killed) {
       proc.kill('SIGKILL')
       proc.disconnect()

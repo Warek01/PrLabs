@@ -1,3 +1,5 @@
+// Testing script that adds one link to queue
+
 import amqp from 'amqplib'
 import { appAmqpOptions } from './shared'
 
@@ -13,8 +15,7 @@ await amqpChannel.assertQueue(appAmqpOptions.queue, {
 
 amqpChannel.sendToQueue(
   appAmqpOptions.queue,
-  Buffer.from('["https://999.md/ro/83810069"]'),
-  {},
+  Buffer.from(JSON.stringify(['https://999.md/ro/83810069'])),
 )
 
 setTimeout(() => process.exit(), 200)
