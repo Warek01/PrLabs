@@ -1,14 +1,9 @@
 import amqp from 'amqplib'
-import {
-  ConsoleMessage,
-  ConsoleMessageType,
-  HTTPRequest,
-  PuppeteerLaunchOptions,
-} from 'puppeteer'
-import * as colorette from 'colorette'
+import { HTTPRequest, PuppeteerLaunchOptions } from 'puppeteer'
 import { DataSourceOptions } from 'typeorm'
 
 import { Item } from './entities/item.entity'
+import { Batch } from './entities/batch.entity'
 
 export const appAmqpOptions = {
   url: 'amqp://localhost',
@@ -18,19 +13,11 @@ export const appAmqpOptions = {
 
 export const appBrowserOptions: PuppeteerLaunchOptions = {
   headless: false,
-  devtools: false,
   waitForInitialPage: false,
   product: 'chrome',
   channel: 'chrome',
   ignoreHTTPSErrors: true,
-  defaultViewport: {
-    height: 800,
-    width: 600,
-    hasTouch: false,
-    isMobile: false,
-    isLandscape: true,
-    deviceScaleFactor: 1,
-  },
+  debuggingPort: 8888,
 }
 
 export const appDataSourceOptions: DataSourceOptions = {
@@ -42,44 +29,24 @@ export const appDataSourceOptions: DataSourceOptions = {
   port: 5432,
   username: 'warek',
   password: 'warek',
-  entities: [Item],
+  entities: [Item, Batch],
 }
 
-export async function requestInterceptor(request: HTTPRequest): Promise<void> {
-  const type = request.resourceType()
+export const requestInterceptorAllowOnlyDocument = (request: HTTPRequest) =>
+  request.resourceType() === 'document' ? request.continue() : request.abort()
 
-  const shouldBlock: (typeof type)[] = [
-    'image',
-    'stylesheet',
-    'websocket',
-    'eventsource',
-    'cspviolationreport',
-    'font',
-    'media',
-  ]
+export async function createAmqpConnection(): Promise<amqp.Channel> {
+  const amqpConnection = await amqp.connect(appAmqpOptions.url, {
+    credentials: appAmqpOptions.credentials,
+  })
 
-  // console.log(type, shouldBlock.includes(type))
+  const amqpChannel = await amqpConnection.createChannel()
 
-  if (shouldBlock.includes(type)) {
-    await request.abort()
-  } else {
-    await request.continue()
-  }
-}
+  await amqpChannel.assertQueue(appAmqpOptions.queue, {
+    durable: false,
+  })
 
-export function onPageConsoleMessage(message: ConsoleMessage): void {
-  const type: ConsoleMessageType = message.type()
-  const text: string = message.text()
+  amqpChannel.on('close', () => amqpConnection.close())
 
-  const supportedTypes: ConsoleMessageType[] = ['log', 'error', 'warning']
-
-  const colors: Partial<Record<ConsoleMessageType, colorette.Color>> = {
-    log: colorette.blueBright,
-    warning: colorette.yellowBright,
-    error: colorette.redBright,
-  }
-
-  if (supportedTypes.includes(type)) {
-    console.log(colors[type](`${colorette.underline('Browser:')} ${text}`))
-  }
+  return amqpChannel
 }

@@ -1,13 +1,12 @@
 import amqp from 'amqplib'
 import * as colorette from 'colorette'
-import puppeteer, { Browser, Page } from 'puppeteer'
+import puppeteer from 'puppeteer'
 import { DataSource, Repository } from 'typeorm'
 
 import {
   appAmqpOptions,
-  appBrowserOptions,
   appDataSourceOptions,
-  requestInterceptor,
+  requestInterceptorAllowOnlyDocument,
 } from './shared'
 import { Item } from './entities/item.entity'
 
@@ -16,7 +15,19 @@ process
   .once('SIGKILL', onTerminate)
   .once('SIGINT', onTerminate)
 
-const browser: Browser = await puppeteer.launch(appBrowserOptions)
+const browser = await puppeteer.connect({
+  ignoreHTTPSErrors: true,
+  browserWSEndpoint: await Bun.file('puppeteer-instance.txt').text(),
+  defaultViewport: {
+    isLandscape: true,
+    isMobile: false,
+    width: 1280,
+    height: 720,
+    hasTouch: false,
+    deviceScaleFactor: 1
+  }
+})
+
 const dataSource: DataSource = new DataSource(appDataSourceOptions)
 const amqpConnection: amqp.Connection = await amqp.connect(appAmqpOptions.url, {
   credentials: appAmqpOptions.credentials,
@@ -27,9 +38,9 @@ try {
   const itemRepo: Repository<Item> = dataSource.getRepository(Item)
   const amqpChannel: amqp.Channel = await amqpConnection.createChannel()
 
-  const page: Page = await browser.newPage()
+  const page = await browser.newPage()
   await page.setRequestInterception(true)
-  page.on('request', requestInterceptor)
+  page.on('request', requestInterceptorAllowOnlyDocument)
 
   await amqpChannel.assertQueue(appAmqpOptions.queue, {
     durable: false,

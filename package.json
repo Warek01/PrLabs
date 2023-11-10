@@ -3,8 +3,8 @@
   "type": "module",
   "scripts": {
     "start:producer": "bun run src/producer.ts",
-    "start:master-consumer": "bun run src/master-consumer.ts",
-    "start:slave-consumer": "bun run src/slave-consumer.ts"
+    "start:master-consumer": "bun run src/conumer-manager.ts",
+    "start:slave-consumer": "bun run src/consumer.ts"
   },
   "dependencies": {
     "@types/amqplib": "^0.10.4",

@@ -4,69 +4,65 @@ import puppeteer, { Page, Browser } from 'puppeteer'
 import {
   appBrowserOptions,
   appAmqpOptions,
-  onPageConsoleMessage,
-  requestInterceptor,
+  requestInterceptorAllowOnlyDocument,
+  createAmqpConnection,
 } from './shared'
+import * as colorette from 'colorette'
 
-process
-  .on('SIGINT', onTerminate)
-  .on('SIGTERM', onTerminate)
-  .on('SIGKILL', onTerminate)
+console.time('Execution time')
 
-const initialPageUrl = 'https://999.md/ro/list/transport/cars?page='
 const browser: Browser = await puppeteer.launch(appBrowserOptions)
-const page: Page = await browser.newPage()
+const pages: Page[] = await browser.pages()
+const page: Page = pages.at(0) || (await browser.newPage())
 
 await page.setRequestInterception(true)
-page.on('console', onPageConsoleMessage).on('request', requestInterceptor)
+page
+  .on('request', requestInterceptorAllowOnlyDocument)
+  .on('close', () => browser.close())
 
-const amqpConnection: amqp.Connection = await amqp.connect(appAmqpOptions.url, {
-  credentials: appAmqpOptions.credentials,
-})
-const amqpChannel: amqp.Channel = await amqpConnection.createChannel()
-
-await amqpChannel.assertQueue(appAmqpOptions.queue, {
-  durable: false,
-})
+const amqpChannel: amqp.Channel = await createAmqpConnection()
+process
+  .on('SIGINT', () => browser.close())
+  .on('SIGTERM', () => browser.close())
+  .on('SIGKILL', () => browser.close())
 
 try {
-  await extractLinks(page, 1, 2)
+  await extractLinks(page, 1, 5)
+  console.timeEnd('Execution time')
 } catch (e) {
   console.error(e)
+} finally {
+  await page.close()
+  await browser.close()
+  await amqpChannel.close()
 }
-
-await page.close()
-await browser.close()
-await amqpChannel.close()
-await amqpConnection.close()
-process.exit(0)
 
 async function extractLinks(
   page: Page,
   pageIndex: number,
   maxPageIndex: number,
 ): Promise<null> {
-  const url: string = initialPageUrl + pageIndex
-
+  const url: string = 'https://999.md/ro/list/transport/cars?page=' + pageIndex
   console.log(`Requesting ${url}`)
-  await page.goto(url, { waitUntil: 'load' })
 
-  // await page.waitForSelector('.ads-list-photo')
+  await page.goto(url)
+  await page.waitForSelector('.ads-list-photo')
+
   const anchors = await page.$$(
     '.ads-list-photo .ads-list-photo-item:not(:has(span.booster-label)) a.js-item-ad',
   )
 
-  const linksBatch: Set<string> = new Set<string>() // Set to exclude duplicates
+  const linksBatch: Set<string> = new Set<string>()
 
   for (const anchor of anchors) {
     linksBatch.add(await page.evaluate((a) => a.href, anchor))
   }
 
-  console.log(`Sent a batch of ${linksBatch.size} links`)
+  console.log(`Sent ${colorette.greenBright(linksBatch.size)} links`)
 
   amqpChannel.sendToQueue(
     appAmqpOptions.queue,
-    Buffer.from(JSON.stringify(Array.from(linksBatch))), // Must be Array to be stringified properly
+    Buffer.from(JSON.stringify(Array.from(linksBatch))),
   )
 
   const paginator = await page.$('.paginator')
@@ -75,7 +71,7 @@ async function extractLinks(
     !!paginator &&
     (await paginator.$eval(
       'li:last-child',
-      (li) => !li.classList.contains('current'), // If last pagination button is selected
+      (li) => !li.classList.contains('current'),
     ))
 
   if (!hasNext) {
@@ -85,9 +81,4 @@ async function extractLinks(
   return hasNext && pageIndex <= maxPageIndex
     ? extractLinks(page, pageIndex + 1, maxPageIndex)
     : null
-}
-
-async function onTerminate(): Promise<void> {
-  await Promise.all([browser.close(), amqpConnection.close()])
-  process.exit(0)
 }
