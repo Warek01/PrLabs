@@ -15,17 +15,20 @@ process
   .once('SIGKILL', onTerminate)
   .once('SIGINT', onTerminate)
 
-const browser = await puppeteer.connect({
+const browser = await puppeteer.launch({
   ignoreHTTPSErrors: true,
-  browserWSEndpoint: await Bun.file('puppeteer-instance.txt').text(),
   defaultViewport: {
     isLandscape: true,
     isMobile: false,
     width: 1280,
     height: 720,
     hasTouch: false,
-    deviceScaleFactor: 1
-  }
+    deviceScaleFactor: 1,
+  },
+  headless: 'new',
+  waitForInitialPage: false,
+  product: 'chrome',
+  channel: 'chrome',
 })
 
 const dataSource: DataSource = new DataSource(appDataSourceOptions)
@@ -60,10 +63,8 @@ try {
 
   async function getTransportData(anchors: string[]): Promise<void> {
     for (const anchor of anchors) {
-      log(`Navigating to ${anchor}`)
-      await page.goto(anchor, { waitUntil: 'domcontentloaded' })
+      await page.goto(anchor)
       await page.waitForSelector('header')
-      log(`Got ${anchor}`)
 
       const item = new Item()
       item.url = anchor
@@ -221,12 +222,11 @@ try {
 
       await itemRepo.save(item)
 
-      log(`Finished ${anchor}`)
+      log(`Scraped ${anchor}`)
 
-      // Random delay
-      await new Promise((res) =>
-        setTimeout(() => res(null), Math.random() * 200),
-      )
+      // await new Promise((res) =>
+      //   setTimeout(() => res(null), Math.random() * 200),
+      // )
     }
   }
 } finally {

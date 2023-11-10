@@ -27,7 +27,7 @@ process
   .on('SIGKILL', () => browser.close())
 
 try {
-  await extractLinks(page, 1, 5)
+  await extractLinks(page, 1, 20)
   console.timeEnd('Execution time')
 } catch (e) {
   console.error(e)

@@ -2,9 +2,8 @@ import path from 'path'
 import * as colorette from 'colorette'
 import { ChildProcess, fork } from 'child_process'
 
-const consumerPath: string = path.join(__dirname, 'consumer', 'consumer.ts')
+const consumerPath: string = path.join(__dirname, 'consumer.ts')
 const childProcesses: ChildProcess[] = []
-
 
 console.log(
   `Type ${colorette.greenBright('start <COUNT>')} or ${colorette.greenBright(
