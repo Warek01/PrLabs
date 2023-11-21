@@ -1,9 +1,10 @@
 import amqp from 'amqplib'
-import { HTTPRequest, PuppeteerLaunchOptions } from 'puppeteer'
 import { DataSourceOptions } from 'typeorm'
 
 import { Item } from './entities/item.entity'
 import { Batch } from './entities/batch.entity'
+import * as colorette from 'colorette'
+import { JSDOM } from 'jsdom'
 
 export const appAmqpOptions = {
   url: 'amqp://localhost',
@@ -11,14 +12,7 @@ export const appAmqpOptions = {
   credentials: amqp.credentials.plain('warek', 'warek'),
 }
 
-export const appBrowserOptions: PuppeteerLaunchOptions = {
-  headless: false,
-  waitForInitialPage: false,
-  product: 'chrome',
-  channel: 'chrome',
-  ignoreHTTPSErrors: true,
-  debuggingPort: 8888,
-}
+export const baseUrl = 'https://999.md'
 
 export const appDataSourceOptions: DataSourceOptions = {
   type: 'postgres',
@@ -32,8 +26,29 @@ export const appDataSourceOptions: DataSourceOptions = {
   entities: [Item, Batch],
 }
 
-export const requestInterceptorAllowOnlyDocument = (request: HTTPRequest) =>
-  request.resourceType() === 'document' ? request.continue() : request.abort()
+
+export async function loadDocument(url: string): Promise<Document | null> {
+  const req = await fetch(url, {
+    credentials: 'omit',
+    cache: 'only-if-cached',
+    keepalive: false,
+    timeout: true,
+  })
+
+  if (!req.ok) {
+    console.log(
+      colorette.redBright(`Error while loading page ${url}`),
+      colorette.blueBright(req.status + ' ' + req.statusText),
+    )
+
+    return null
+  }
+
+  const html = await req.text()
+  const dom = new JSDOM(html)
+
+  return dom.window.document
+}
 
 export async function createAmqpConnection(): Promise<amqp.Channel> {
   const amqpConnection = await amqp.connect(appAmqpOptions.url, {

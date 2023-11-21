@@ -1,35 +1,14 @@
 import amqp from 'amqplib'
 import * as colorette from 'colorette'
-import puppeteer from 'puppeteer'
 import { DataSource, Repository } from 'typeorm'
 
 import {
   appAmqpOptions,
   appDataSourceOptions,
-  requestInterceptorAllowOnlyDocument,
+  baseUrl,
+  loadDocument,
 } from './shared'
 import { Item } from './entities/item.entity'
-
-process
-  .once('SIGTERM', onTerminate)
-  .once('SIGKILL', onTerminate)
-  .once('SIGINT', onTerminate)
-
-const browser = await puppeteer.launch({
-  ignoreHTTPSErrors: true,
-  defaultViewport: {
-    isLandscape: true,
-    isMobile: false,
-    width: 1280,
-    height: 720,
-    hasTouch: false,
-    deviceScaleFactor: 1,
-  },
-  headless: 'new',
-  waitForInitialPage: false,
-  product: 'chrome',
-  channel: 'chrome',
-})
 
 const dataSource: DataSource = new DataSource(appDataSourceOptions)
 const amqpConnection: amqp.Connection = await amqp.connect(appAmqpOptions.url, {
@@ -41,213 +20,171 @@ try {
   const itemRepo: Repository<Item> = dataSource.getRepository(Item)
   const amqpChannel: amqp.Channel = await amqpConnection.createChannel()
 
-  const page = await browser.newPage()
-  await page.setRequestInterception(true)
-  page.on('request', requestInterceptorAllowOnlyDocument)
-
   await amqpChannel.assertQueue(appAmqpOptions.queue, {
     durable: false,
   })
 
   while (true) {
-    const data = await amqpChannel.get(appAmqpOptions.queue, { noAck: true })
+    const message = await amqpChannel.get(appAmqpOptions.queue, {
+      noAck: false,
+    })
 
-    if (data === false) {
-      // Do nothing ig
-    } else {
-      const anchors: string[] = JSON.parse(data.content.toString('utf8'))
-
+    if (message) {
+      const content: string = message.content.toString('utf8')
+      const anchors: string[] = JSON.parse(content)
       await getTransportData(anchors)
+      amqpChannel.ack(message)
     }
   }
 
   async function getTransportData(anchors: string[]): Promise<void> {
+    const promises: Promise<void>[] = []
     for (const anchor of anchors) {
-      await page.goto(anchor)
-      await page.waitForSelector('header')
+      promises.push(
+        (async () => {
+          const url = baseUrl + anchor
+          const document = await loadDocument(url)
 
-      const item = new Item()
-      item.url = anchor
-
-      const titleElement = await page.$('header.adPage__header')
-      item.title = await titleElement?.evaluate(
-        (e) => e.textContent?.trim() ?? null,
-      )
-      titleElement?.dispose()
-
-      const descriptionElement = await page.$(
-        'div.adPage__content__description',
-      )
-      item.description = await descriptionElement?.evaluate(
-        (e) => e.textContent?.trim() ?? null,
-      )
-      descriptionElement?.dispose()
-
-      const pricesElement = await page.$$(
-        'ul.adPage__content__price-feature__prices li',
-      )
-      if (pricesElement) {
-        item.prices = {
-          negotiable: false,
-        }
-
-        for (const li of pricesElement) {
-          const text = await li.evaluate((e) => e.textContent.trim())
-          let currency: keyof Item['prices'] = 'lei'
-
-          if (text.includes('$')) {
-            currency = 'dollars'
-          } else if (text.includes('€')) {
-            currency = 'euros'
+          const item = new Item()
+          item.url = url
+          item.categories = []
+          item.features = {}
+          item.otherFeatures = []
+          item.prices = {
+            negotiable: true,
           }
 
-          const matches = text.matchAll(/\d+/g)
-          let allDigits = ''
+          item.title = document
+            .querySelector('header.adPage__header')
+            .textContent.trim()
+          item.description = document
+            .querySelector('div.adPage__content__description')
+            ?.textContent.trim()
 
-          for (const match of matches) {
-            allDigits += match
-          }
+          const pricesElement = document.querySelectorAll(
+            'ul.adPage__content__price-feature__prices li',
+          )
 
-          if (allDigits.length) {
-            item.prices[currency] = parseFloat(allDigits)
-          } else {
-            item.prices.negotiable = true
-          }
+          if (pricesElement.length) {
+            item.prices.negotiable = false
 
-          li.dispose()
-        }
-      }
+            for (const li of pricesElement) {
+              const text = li.textContent.trim()
+              let currency: keyof Item['prices'] = 'lei'
 
-      const regionElement = await page.$('dl.adPage__content__region')
-      item.region = await regionElement?.$$eval('dd', (elements) =>
-        elements
-          .map((e) => e.textContent.replaceAll(',', '').trim())
-          .join(', '),
-      )
-      regionElement?.dispose()
+              if (text.includes('$')) {
+                currency = 'dollars'
+              } else if (text.includes('€')) {
+                currency = 'euros'
+              }
 
-      const featuresElement = await page.$$(
-        '.adPage__content__features__col ul',
-      )
-      if (featuresElement) {
-        item.features = {}
-        item.otherFeatures = []
+              const matches = text.matchAll(/\d+/g)
+              let allDigits = ''
 
-        for (const feature of featuresElement) {
-          const allLi = await feature.$$('li')
+              for (const match of matches) {
+                allDigits += match
+              }
 
-          for (const li of allLi) {
-            const key = await li.$eval('[itemprop=name]', (e) =>
-              e.textContent.trim(),
-            )
-            const valueElement = await li.$('[itemprop=value]')
-
-            if (valueElement) {
-              item.features[key] = await valueElement.evaluate((e) =>
-                e.textContent.trim(),
-              )
-            } else {
-              item.otherFeatures.push(key)
+              if (allDigits.length) {
+                item.prices[currency] = parseFloat(allDigits)
+              } else {
+                item.prices.negotiable = true
+              }
             }
-
-            valueElement?.dispose()
-            li.dispose()
           }
-          feature.dispose()
-        }
-      }
 
-      const categoriesElement = await page.$('#m__breadcrumbs')
-      if (categoriesElement) {
-        item.categories = await categoriesElement.$$eval(
-          'li:not(:last-child)',
-          (lis) => lis.map((li) => li.textContent.trim()),
-        )
-      }
-      categoriesElement?.dispose()
+          item.region = Array.from(
+            document.querySelectorAll<HTMLDataElement>(
+              'dl.adPage__content__region dd',
+            ),
+          )
+            .map((dd) => dd.textContent.replaceAll(',', '').trim())
+            .join(', ')
 
-      const ownerElement = await page.$('.adPage__aside__stats__owner__login')
-      if (ownerElement) {
-        item.owner = {
-          url: await ownerElement.evaluate((e) => e.href),
-          name: await ownerElement.evaluate((e) => e.textContent.trim()),
-        }
-      }
-      ownerElement?.dispose()
+          Array.from(
+            document.querySelectorAll('.adPage__content__features__col li'),
+          ).forEach((li) => {
+            const key = li
+              .querySelector('.adPage__content__features__key')
+              .textContent.trim()
 
-      const viewsElement = await page.$('.adPage__aside__stats__views')
-      if (viewsElement) {
-        item.views = await viewsElement.evaluate((e) =>
-          parseInt(
-            e.textContent
-              .split(':')[1]
-              .split('(')[0]
-              .trim()
-              .replaceAll(' ', ''),
-          ),
-        )
-      }
-      viewsElement?.dispose()
+            const value = li
+              .querySelector('.adPage__content__features__value')
+              ?.textContent.trim()
 
-      const typeElement = await page.$('.adPage__aside__stats__type')
-      if (typeElement) {
-        item.type = await typeElement.evaluate((e) =>
-          e.textContent.split(':')[1].trim(),
-        )
-      }
-      typeElement?.dispose()
+            if (value) item.features[key] = value
+            else item.otherFeatures.push(key)
+          })
 
-      const dateElement = await page.$('.adPage__aside__stats__date')
-      if (dateElement) {
-        item.date = await dateElement.evaluate((e) =>
-          e.textContent.split(':').slice(1).join(':').trim(),
-        )
-      }
-      dateElement?.dispose()
+          Array.from(document.querySelectorAll('#m__breadcrumbs li'))
+            .slice(0, -1)
+            .forEach((li) => item.categories.push(li.textContent.trim()))
 
-      const phoneElement = await page.$('.adPage__content__phone a')
-      if (phoneElement) {
-        item.phone = await phoneElement.evaluate((a) =>
-          a.href.split(':')[1].trim(),
-        )
-      }
-      phoneElement?.dispose()
+          // const ownerElement = await page.$('.adPage__aside__stats__owner__login')
+          // if (ownerElement) {
+          //   item.owner = {
+          //     url: await ownerElement.evaluate((e) => e.href),
+          //     name: await ownerElement.evaluate((e) => e.textContent.trim()),
+          //   }
+          // }
+          // ownerElement?.dispose()
+          //
+          // const viewsElement = await page.$('.adPage__aside__stats__views')
+          // if (viewsElement) {
+          //   item.views = await viewsElement.evaluate((e) =>
+          //     parseInt(
+          //       e.textContent
+          //         .split(':')[1]
+          //         .split('(')[0]
+          //         .trim()
+          //         .replaceAll(' ', ''),
+          //     ),
+          //   )
+          // }
+          // viewsElement?.dispose()
+          //
+          // const typeElement = await page.$('.adPage__aside__stats__type')
+          // if (typeElement) {
+          //   item.type = await typeElement.evaluate((e) =>
+          //     e.textContent.split(':')[1].trim(),
+          //   )
+          // }
+          // typeElement?.dispose()
+          //
+          // const dateElement = await page.$('.adPage__aside__stats__date')
+          // if (dateElement) {
+          //   item.date = await dateElement.evaluate((e) =>
+          //     e.textContent.split(':').slice(1).join(':').trim(),
+          //   )
+          // }
+          // dateElement?.dispose()
+          //
+          // const phoneElement = await page.$('.adPage__content__phone a')
+          // if (phoneElement) {
+          //   item.phone = await phoneElement.evaluate((a) =>
+          //     a.href.split(':')[1].trim(),
+          //   )
+          // }
+          // phoneElement?.dispose()
+          //
+          // item.photos = []
+          // const photosElements = await page.$$('#js-ad-photos img')
+          // for (const photo of photosElements) {
+          //   item.photos.push(await photo.evaluate((img) => img.src))
+          //   photo.dispose()
+          // }
 
-      item.photos = []
-      const photosElements = await page.$$('#js-ad-photos img')
-      for (const photo of photosElements) {
-        item.photos.push(await photo.evaluate((img) => img.src))
-        photo.dispose()
-      }
-
-      await itemRepo.save(item)
-
-      log(`Scraped ${anchor}`)
-
-      // await new Promise((res) =>
-      //   setTimeout(() => res(null), Math.random() * 200),
-      // )
+          await itemRepo.save(item)
+        })().then(() => log(`Scraped ${anchor}`)),
+      )
     }
+
+    await Promise.all(promises)
   }
 } finally {
-  await dispose()
+  await Promise.all([dataSource.destroy(), amqpConnection.close()])
 }
 
 function log(arg: string): void {
   console.log(`${colorette.blue(`Slave(${process.pid})`)}: ${arg}`)
-}
-
-async function dispose(): Promise<void> {
-  await Promise.all([
-    browser.close(),
-    dataSource.destroy(),
-    amqpConnection.close(),
-  ])
-}
-
-async function onTerminate() {
-  log('Terminating')
-  await dispose()
-  log('Terminated')
-  process.exit(0)
 }
