@@ -8,3 +8,5 @@ services:
       POSTGRES_USER: warek
       POSTGRES_PASSWORD: warek
       POSTGRES_DB: electro_scooter
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
