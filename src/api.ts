@@ -9,16 +9,7 @@ import cors from 'cors'
 import swaggerDocument from './swagger.json'
 import { dataSource } from './data-source'
 import { ElectroScooter } from './entities/electro-scooter.entity'
-
-enum UdpMessageType {
-  ACCEPT_LEADER = 'accept_leader',
-  HTTP_CREDENTIALS = 'http_credentials',
-}
-
-interface Credentials {
-  port: number
-  host: string
-}
+import { UdpMessageType, Credentials } from './types'
 
 const { pid } = process
 const ports = [3000, 3001, 3002]
@@ -37,44 +28,54 @@ main()
 
 // ----------------------------------------
 async function main() {
-  await dataSource.initialize()
-  const scooterRepo = dataSource.getRepository(ElectroScooter)
-
-  const app = express()
-
-  let port = 3000
-
-  while (await isUdpPortBusy(port)) {
-    port++
-  }
-
-  let isLeader = port === mainPort
-  log(isLeader ? 'Leader' : 'Follower')
-
   const credentials: Credentials = {
     host: '127.0.0.1',
-    port,
+    port: 3000,
   }
-  const followerCredentials: Record<number, Credentials> = {}
+
+  while (await isUdpPortBusy(credentials.port)) {
+    credentials.port++
+  }
+
+  let isLeader = credentials.port === mainPort
+  log(isLeader ? 'Leader' : 'Follower')
+
+  if (isLeader) {
+    // Only leader knows at beginning secret, then sends it to followers
+    credentials.secret = 'your_secret_password'
+  }
+
+  const followerCredentials: Credentials[] = []
   let leaderCredentials: Credentials | null = isLeader ? credentials : null
 
+  await dataSource.initialize()
+
+  const scooterRepo = dataSource.getRepository(ElectroScooter)
+  const app = express()
   const udpSocket = dgram.createSocket('udp4')
 
-  const acceptedBy = []
+  // Should be accepted by all follower ports
+  const acceptedBy: number[] = []
+
   udpSocket.on('message', (buff, remoteInfo) => {
     const str = buff.toString('utf8')
     const message = JSON.parse(str)
 
     if (isLeader) {
+      // Leader messages
       switch (message.type) {
         case UdpMessageType.ACCEPT_LEADER: {
           acceptedBy.push(remoteInfo.port)
           udpLog(`${remoteInfo.port} sent leader approval`)
 
+          // If accepted by all followers
           if (acceptedBy.length === ports.length - 1) {
             log('Accepted by all followers. Starting the server')
-            app.listen(port, () => httpLog(`Listening to 127.0.0.1:${port}`))
+            app.listen(credentials.port, () =>
+              httpLog(`Listening to ${credentials.host}:${credentials.port}`),
+            )
 
+            // Send credentials to all followers
             ports
               .filter((p) => p !== mainPort)
               .forEach((p) =>
@@ -87,13 +88,22 @@ async function main() {
                 ),
               )
           }
+
+          break
+        }
+
+        case UdpMessageType.HTTP_CREDENTIALS : {
+          followerCredentials.push(message.credentials)
+          break
         }
       }
     } else {
+      // Follower messages
       switch (message.type) {
         case UdpMessageType.HTTP_CREDENTIALS: {
           leaderCredentials = message.credentials
 
+          // Received leader credentials, send own
           udpSocket.send(
             JSON.stringify({
               type: UdpMessageType.HTTP_CREDENTIALS,
@@ -101,15 +111,17 @@ async function main() {
             }),
             mainPort,
           )
+          break
         }
       }
     }
   })
 
-  udpSocket.bind(port, '127.0.0.1', () => {
-    udpLog(`Listening to 127.0.0.1:${port}`)
+  udpSocket.bind(credentials.port, credentials.host, () => {
+    udpLog(`Listening to ${credentials.host}:${credentials.port}`)
 
     if (!isLeader) {
+      // Send accept to leader as soon as starts
       udpSocket.send(
         JSON.stringify({ type: UdpMessageType.ACCEPT_LEADER }),
         mainPort,
@@ -118,43 +130,45 @@ async function main() {
   })
 
   if (isLeader) {
-    // Expose ui
+    // Expose swagger ui
     app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {}))
-    app.use(express.static(path.join(__dirname, 'public')))
   }
 
   app.use(express.json())
   app.use(cors())
   app.use((req, res, next) => {
-    httpLog(req.url)
+    httpLog(req.method, req.url)
     next()
   })
 
+  // Both leader and followers accept read
+  app.get('/electro-scooters/:id', async (req, res) => {
+    const id = parseInt(req.params.id)
+    const scooter = await scooterRepo.findOneBy({ id })
+
+    if (!scooter) {
+      res.statusCode = 404
+      res.send({ error: 'Electro Scooter not found' })
+      return
+    }
+
+    res.statusCode = 200
+    res.send(scooter)
+  })
+
   if (isLeader) {
-    app.route('/electro-scooters').post(async (req, res) => {
-      try {
-        const { body } = req
+    // Config leader http endpoints
 
-        const scooter = scooterRepo.create()
-        scooter.name = body.name
-        scooter.batteryLevel = body.batteryLevel ?? body.battery_level
-        await scooterRepo.save(scooter)
-
-        res.statusCode = 201
-        res.send({ message: 'Electro Scooter created successfully' })
-      } catch (e) {
-        console.error(e)
-        res.statusCode = 400
-        res.send({ error: 'Invalid request data' })
-      }
+    // Redirect writes to a random follower
+    app.post('/electro-scooters', (req, res) => {
+      let credential = followerCredentials[Math.floor(Math.random() * followerCredentials.length)]
+      const url = `http://${credential.host}:${credential.port}/electro-scooters`
+      httpLog(`Redirecting to ${url}`)
+      res.redirect(307, url)
     })
 
     app
       .route('/electro-scooters/:id')
-
-      .get((req, res) => {
-        res.redirect(`http://localhost:3001${req.url}`)
-      })
 
       .put(async (req, res) => {
         const { body } = req
@@ -181,7 +195,7 @@ async function main() {
         const scooter = await scooterRepo.findOneBy({ id })
         const password = req.headers['x-delete-password']
 
-        if (password !== 'your_secret_password') {
+        if (password !== leaderCredentials.secret) {
           res.statusCode = 401
           res.send({ error: 'Incorrect password' })
           return
@@ -199,24 +213,37 @@ async function main() {
         res.send({ message: 'Electro Scooter deleted successfully' })
       })
   } else {
-    app
-      .route('/electro-scooters/:id')
+    // Config follower http endpoints
 
-      .get(async (req, res) => {
-        const id = parseInt(req.params.id)
-        const scooter = await scooterRepo.findOneBy({ id })
+    app.post('/electro-scooters', async (req, res) => {
+      try {
+        const { body } = req
 
-        if (!scooter) {
-          res.statusCode = 404
-          res.send({ error: 'Electro Scooter not found' })
+        const password = req.headers['x-delete-password']
+
+        if (password !== leaderCredentials.secret) {
+          res.statusCode = 401
+          res.send({ error: 'Incorrect password' })
           return
         }
 
-        res.statusCode = 200
-        res.send(scooter)
-      })
+        const scooter = scooterRepo.create()
+        scooter.name = body.name
+        scooter.batteryLevel = body.batteryLevel ?? body.battery_level
+        await scooterRepo.save(scooter)
 
-    app.listen(port, () => httpLog(`Listening to 127.0.0.1:${port}`))
+        res.statusCode = 201
+        res.send({ message: 'Electro Scooter created successfully' })
+      } catch (e) {
+        console.error(e)
+        res.statusCode = 400
+        res.send({ error: 'Invalid request data' })
+      }
+    })
+
+    app.listen(credentials.port, () =>
+      httpLog(`Listening to ${credentials.host}:${credentials.port}`),
+    )
   }
 }
 
@@ -232,31 +259,7 @@ function httpLog(...args: any[]) {
   log(colorette.blueBright('[HTTP]'), ...args)
 }
 
-async function getUdpPort(start = 3000, end = 5000): Promise<number> {
-  return new Promise((outResolve, outReject) => {
-    let checkPort = (port: number) => {
-      return new Promise((resolve, reject) => {
-        let socket = dgram.createSocket('udp4')
-
-        socket.bind(port)
-
-        socket.on('listening', () => {
-          setImmediate(() => socket.close())
-          setImmediate(() => outResolve(port))
-        })
-
-        socket.on('error', (err) => {
-          if (++port > end) outReject('NOPORTS')
-
-          checkPort(port)
-        })
-      })
-    }
-
-    checkPort(start)
-  })
-}
-
+// Checks if a UDP port is occupied
 function isUdpPortBusy(port: number): Promise<boolean> {
   return new Promise((res, rej) => {
     const socket = dgram.createSocket('udp4')

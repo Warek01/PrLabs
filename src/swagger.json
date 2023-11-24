@@ -51,6 +51,17 @@
               }
             },
             "required": true
+          },
+          {
+            "in": "header",
+            "name": "X-Delete-Password",
+            "schema": {
+              "title": "Password",
+              "type": "string",
+              "default": "your_secret_password",
+              "example": "your_secret_password"
+            },
+            "required": true
           }
         ],
         "responses": {
