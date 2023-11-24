@@ -1,13 +1,10 @@
 services:
-  rabbitmq:
-    hostname: 'rabbitmq'
-    container_name: rabbitmq
-    build:
-      dockerfile: Dockerfile
+  db:
+    image: postgres
+    container_name: electro_scooter_pg
     ports:
-      - 15672:15672
-      - 5672:5672
+      - 5433:5432
     environment:
-      RABBITMQ_DEFAULT_USER: warek
-      RABBITMQ_DEFAULT_PASS: warek
-
+      POSTGRES_USER: warek
+      POSTGRES_PASSWORD: warek
+      POSTGRES_DB: electro_scooter
