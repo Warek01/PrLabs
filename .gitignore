@@ -1,7 +1,2 @@
-node_modules/
-.idea/
-.vs/
-.vscode/
-.env/
-.git/
-pgdata/
+node_modules
+.idea

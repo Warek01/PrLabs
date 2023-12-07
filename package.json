@@ -1,21 +1,16 @@
 {
+  "author": "warek",
+  "description": "PR Lab 9",
   "scripts": {
-    "dev": "ts-node src/index.ts",
-    "api": "ts-node src/api.ts"
+    "api": "pnpm run --filter api dev",
+    "ui": "pnpm run --filter ui dev"
   },
-  "dependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.9.3",
-    "@types/swagger-ui-express": "^4.1.6",
-    "colorette": "^2.0.20",
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "pg": "^8.11.3",
+  "engines": {
+    "node": "v20.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.3",
     "prettier": "^3.1.0",
-    "reflect-metadata": "^0.1.13",
-    "swagger-ui-express": "^5.0.0",
-    "ts-node": "^10.9.1",
-    "typeorm": "^0.3.17"
+    "typescript": "^5.2.2"
   }
 }
