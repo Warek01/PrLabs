@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='UTF-8'>
+  <title>Send email</title>
+  <style>
+    *:focus-within {
+      outline: none;
+    }
+
+    body {
+      padding: 32px;
+      margin: 0;
+      background-color: royalblue;
+      color: white;
+      font-size: 20px;
+      font-family: sans-serif;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    input {
+      width: 300px;
+    }
+
+    label {
+      display: grid;
+      grid-template-columns: 80px auto;
+    }
+
+    textarea {
+      width: 800px;
+      height: 300px;
+      resize: none;
+    }
+
+    button {
+      width: 180px;
+      height: 80px;
+      margin-left: 80px;
+    }
+  </style>
+</head>
+<body>
+<form action='/' method='post' enctype='multipart/form-data'>
+  <label>
+    <span>To</span>
+    <input type='text' name='to' />
+  </label>
+  <label>
+    <span>Subject</span>
+    <input type='text' name='subject' />
+  </label>
+  <label>
+    <span>Text</span>
+    <textarea name='text'></textarea>
+  </label>
+  <label>
+    <span>File</span>
+    <input type='file' name='file' />
+  </label>
+  <button type='submit'>
+    Send email
+  </button>
+</form>
+</body>
+</html>
